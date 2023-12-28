@@ -31,7 +31,8 @@ exports.register = async (req, res) => {
 
     const dataDoctor = {
       users_id: user.id,
-      doctor_status_id: 2
+      doctor_status_id: 2,
+      doctor_duty_status_id: 2
     };
 
   

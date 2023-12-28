@@ -14,6 +14,7 @@ router.use('/auth', require('./auth.router'));
 router.use('/doctors', require('./doctors.router'));
 router.use('/patients', require('./patients.router'));
 router.use('/profile',authMiddleware, require('./profile.router'));
+router.use('/queue', require('./queue.router'));
 
 router.use('*', (request, response) => {
   return response.status(404).json({

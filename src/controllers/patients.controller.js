@@ -2,6 +2,7 @@ const errorHandler = require('../helpers/errorHandler.helper');
 const patientsModel = require('../models/patients.model');
 const doctorsModel = require('../models/doctors.model');
 const usersModel = require('../models/users.model');
+const consultModel = require('../models/consult.model');
 
 exports.getAllPatients = async (req, res) => {
   try {
@@ -64,11 +65,43 @@ exports.updateConsultQueue = async (req, res) => {
       throw Error('cannot_update_status');
     }
 
-    const doctorsAvail = await doctorsModel.findAllNoQuery(1);
-    console.log(doctorsAvail);
-    if(!doctorsAvail) {
-      throw Error('no_doctors_available');
+    const doctorsAvail = await doctorsModel.findAllAvailableSortCurrent(1);
+    console.log('doctor Sorting by updated at', doctorsAvail);
+
+    if(doctorsAvail) {
+
+      const durationNull = null;
+      const statusDuty = 1;
+      const updateDutyData = {
+        users_id: id,
+        duration: durationNull,
+        doctor_duty_status_id: statusDuty
+      };
+      console.log('dataDuty:', updateDutyData);
+
+      const updateDoctor = await doctorsModel.update(updateDutyData); //change isOnDuty
+      console.log(updateDoctor);
+      if(!doctorsAvail.isOnDuty) {
+        throw Error('update_duty_status_error');
+      }
+      const dataConsult = {
+        doctor_id: doctorsAvail.users_id,
+        patients_id: id
+      };
+      const makeConsult = await consultModel.insert(dataConsult);  //insert to consultation_activity
+      console.log(makeConsult);
+
+      // const {page, limit, search, sort, sortBy} = req.body;
+      const consultActivity = await consultModel.findAllConsult();
+
+      return res.json({
+        success: true,
+        message: 'List of Doctors',
+        results: consultActivity
+      });
     }
+    // jika doktor
+
     // banyak data keluarannya harus, dipilih satu dari yang terurut
 
     // const {users_id, averageDuration} = doctorsAvail
@@ -86,3 +119,5 @@ exports.updateConsultQueue = async (req, res) => {
     return errorHandler(res, err);
   }
 };
+
+

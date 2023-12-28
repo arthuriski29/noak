@@ -21,13 +21,15 @@ exports.findAll = async (page, limit, search, sort, sortBy) => {
       "u"."name" as "name",
       "d"."duration" as "averageDuration",
       "drstat"."name" as "status",
+      "drduty"."name" as "isOnDuty",
       "d"."createdAt",
       "d"."updatedAt"
     FROM "${doctors}" "d"
     JOIN "users" "u" ON "u"."id" = "d"."users_id"
     JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id" 
+    JOIN "doctor_duty_status" "drduty" ON "drduty"."id" = "d"."doctor_duty_status_id"  
     WHERE LOWER("u"."name") LIKE LOWER($3)
-    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "d"."createdAt", "d"."updatedAt"
+    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "drduty"."name", "d"."createdAt", "d"."updatedAt"
     ORDER BY "d"."${sort}" ${sortBy} 
     LIMIT $1 OFFSET $2
 
@@ -52,13 +54,15 @@ exports.findAllAvailable = async (page, limit, search, sort, sortBy) => {
       "d"."users_id",
       "u"."name" as "name",
       "d"."duration" as "averageDuration",
+      "drduty"."name" as "isOnDuty",
       "d"."createdAt",
       "d"."updatedAt"
     FROM "${doctors}" "d"
     JOIN "users" "u" ON "d"."users_id" = "u"."id"
-    JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id" 
+    JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id"
+    JOIN "doctor_duty_status" "drduty" ON "drduty"."id" = "d"."doctor_duty_status_id"  
     WHERE "drstat"."id"='1' AND LOWER("u"."name") LIKE LOWER($3) 
-    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "d"."createdAt", "d"."updatedAt"
+    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "drduty"."name", "d"."createdAt", "d"."updatedAt"
     ORDER BY "d"."${sort}" ${sortBy} 
     LIMIT $1 OFFSET $2
 
@@ -76,17 +80,45 @@ exports.findAllNoQuery = async (status) => {
       "d"."users_id",
       "u"."name" as "name",
       "d"."duration" as "averageDuration",
+      "drduty"."name" as "isOnDuty",
       "d"."createdAt",
       "d"."updatedAt"
     FROM "${doctors}" "d"
     JOIN "users" "u" ON "d"."users_id" = "u"."id"
     JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id" 
+    JOIN "doctor_duty_status" "drduty" ON "drduty"."id" = "d"."doctor_duty_status_id" 
     WHERE "drstat"."id"=$1 
-    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "d"."createdAt", "d"."updatedAt"
+    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "drduty"."name", "d"."createdAt", "d"."updatedAt"
   `;
   const values = [status];
   const {rows} = await db.query(query, values);
   return rows;
+};
+
+exports.findAllAvailableSortCurrent = async (status) => {
+  // sort = "updatedAt";
+  // sortBy = "ASC";
+
+  const query = `
+    SELECT 
+      "d"."id",
+      "d"."users_id",
+      "u"."name" as "name",
+      "d"."duration" as "averageDuration",
+      "drduty"."name" as "isOnDuty",
+      "d"."createdAt",
+      "d"."updatedAt"
+    FROM "${doctors}" "d"
+    JOIN "users" "u" ON "d"."users_id" = "u"."id"
+    JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id" 
+    JOIN "doctor_duty_status" "drduty" ON "drduty"."id" = "d"."doctor_duty_status_id" 
+    WHERE "drstat"."id"=$1
+    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "drduty"."name", "d"."createdAt", "d"."updatedAt"
+    ORDER BY "d"."updatedAt" ASC 
+  `;
+  const values = [status];
+  const {rows} = await db.query(query, values);
+  return rows[0];
 };
 
 exports.findOneByUserId = async (id) => {
@@ -97,13 +129,15 @@ exports.findOneByUserId = async (id) => {
       "u"."name" as "name",
       "d"."duration" as "averageDuration",
       "drstat"."name" as "status",
+      "drduty"."name" as "isOnDuty",
       "d"."createdAt",
       "d"."updatedAt"
     FROM "${doctors}" "d"
     JOIN "users" "u" ON "u"."id" = "d"."users_id"
     JOIN "doctor_status" "drstat" ON "drstat"."id" = "d"."doctor_status_id" 
+    JOIN "doctor_duty_status" "drduty" ON "drduty"."id" = "d"."doctor_duty_status_id" 
     WHERE "d"."users_id"= $1
-    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "d"."createdAt", "d"."updatedAt"
+    GROUP BY "d"."id", "d"."users_id", "u"."name", "d"."duration", "drstat"."name", "drduty"."name", "d"."createdAt", "d"."updatedAt"
 
   `;
   const values = [id];
@@ -117,12 +151,13 @@ exports.insertDefault = async (data) => {
     INSERT INTO "${doctors}" (
       "users_id", 
       "duration", 
-      "doctor_status_id"
+      "doctor_status_id",
+      "doctor_duty_status_id"
       )
-    VALUES ($1, INTERVAL '0 minutes', $2)
+    VALUES ($1, INTERVAL '0 minutes', $2, $3)
     RETURNING *
   `;
-  const values = [data.users_id, data.doctor_status_id];   
+  const values = [data.users_id, data.doctor_status_id, data.doctor_duty_status_id];   
   const {rows} = await db.query(query, values);
   return rows[0];
 };
@@ -173,17 +208,18 @@ exports.insertDefault = async (data) => {
 //   const {rows} = await db.query(query, values);
 //   return rows[0];
 // };
-exports.update = async (id, duration, status) => {
+exports.update = async (data) => {
   const query = `
   UPDATE "doctors"
   SET
   "duration"=COALESCE(NULLIF($2::INTERVAL, NULL), "duration"), 
   "doctor_status_id"=COALESCE(NULLIF($3::INTEGER, NULL), "doctor_status_id"), 
+  "doctor_duty_status_id"=COALESCE(NULLIF($4::INTEGER, NULL), "doctor_duty_status_id"), 
   "updatedAt"=NOW() AT TIME ZONE 'Asia/Jakarta'
   WHERE "users_id"= $1
   RETURNING *
   `;
-  const values = [id, duration, status];   
+  const values = [data.users_id, data.duration, data.doctor_status_id, data.doctor_duty_status_id];   
   const {rows} = await db.query(query, values);
   return rows[0];
 };

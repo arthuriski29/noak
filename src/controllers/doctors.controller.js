@@ -61,11 +61,17 @@ exports.updateDoctors = async (req, res) => {
     const durationIntv = duration ? `${duration} m` : null;
     const status = req.body.statusValue;
 
+    const dataUpdate = {
+      users_id: id,
+      duration: durationIntv,
+      doctor_status_id: status
+    };
+
     console.log(`status nya dalam integer, data type: ${typeof status}, status: ${status}`);
     console.log(`duration nya dalam integer, data type: ${typeof duration}, duration: ${duration}`);
-    console.log(`durationIntv nya dalam string, data type: ${typeof durationIntv}, durationIntv: ${duration}`);
+    console.log(`durationIntv nya dalam string, data type: ${typeof durationIntv}, durationIntv: ${durationIntv}`);
 
-    const update = await doctorsModel.update(id, durationIntv, status);
+    const update = await doctorsModel.update(dataUpdate);
     console.log(update);
     if(!update.duration) {
       throw Error('update_duration_error');
